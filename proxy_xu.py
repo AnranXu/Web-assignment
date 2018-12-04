@@ -376,10 +376,8 @@ class Proxy(threading.Thread):
         if self.server and not self.server.closed:
             self.server.queue(data)
             return
-
         # parse http request
         self.request.parse(data)
-
         # once http request parser has reached the state complete
         # we attempt to establish connection to destination server
         if self.request.state == HTTP_PARSER_STATE_COMPLETE:
@@ -416,17 +414,22 @@ class Proxy(threading.Thread):
                 ))
             return
 
-    def _process_response(self, data):
+    def _process_response(self, data,flag):
         # parse incoming response packet
         # only for non-https requests
         if not self.request.method == b'CONNECT':
             self.response.parse(data)
         # queue data for client
         self.client.queue(data)
-        if self.server.addr not in buffer and self.request.method != b'CONNECT':
-            print("creating buffer")
-            print("a:", self.server.addr)
-            buffer[self.server.addr] = data
+        if not flag:
+            if self.server.addr not in buffer and self.request.method != b'CONNECT':
+                print("creating buffer")
+                print("a:", self.server.addr)
+                buffer[self.server.addr] = data
+            elif self.server.addr in buffer and self.request.method != b'CONNECT':
+                print("adding buffer")
+                print("a:", self.server.addr)
+                buffer[self.server.addr] += data
 
     def _access_log(self):
         host, port = self.server.addr if self.server else (None, None)
@@ -494,14 +497,16 @@ class Proxy(threading.Thread):
             if self.server.addr in buffer and self.request.method != b'CONNECT':
                 print("using buffer:", self.server.addr)
                 data = buffer[self.server.addr]
+                flag = True
             else:
                 data = self.server.recv()
+                flag = False
             self.last_activity = self._now()
             if not data:
                 logger.debug('server closed connection')
                 self.server.close()
             else:
-                self._process_response(data)
+                self._process_response(data,flag)
 
         return False
 
