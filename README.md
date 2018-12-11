@@ -28,3 +28,6 @@ part one:
         若有，flag 为 True ，反之则为False
     在之后542行 self._process_response(data,flag)中会进行保存缓存的操作
     432行往后，若not flag成立，才会创建缓存（即确认此次的信息是新的而非从缓存中获取的，避免内存爆炸）。
+
+log_in_page.html:
+naive log in page
