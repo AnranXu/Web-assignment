@@ -31,3 +31,9 @@ part one:
 
 log_in_page.html:
 naive log in page
+
+登录注册页面操作流程：
+1.python proxy.py(目前第56行app.run默认参数是127.0.0.1和5000，可根据实际情况改成app.run(host=***,port=***))
+2.如未注册，浏览器打开127.0.0.1:5000/register(在联网未开proxy状态下)进行注册，注册成功后会自动跳转到登陆界面。
+  如已注册，浏览器打开127.0.0.1:5000/login进行登录。
+3.python proxy_tian_v1.0.py，即可使用proxy。
