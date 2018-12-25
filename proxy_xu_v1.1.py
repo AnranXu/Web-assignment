@@ -302,8 +302,9 @@ class Server(Connection):
     """Establish connection to destination server."""
 
     def __init__(self, host, port):
-        super(Server, self).__init__(b'server')
         self.addr = (host, int(port))
+        super(Server, self).__init__(b'server')
+
 
     def connect(self):
         self.conn = socket.create_connection((self.addr[0], self.addr[1]))
