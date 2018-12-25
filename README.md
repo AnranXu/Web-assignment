@@ -37,3 +37,8 @@ naive log in page
 2.如未注册，浏览器打开127.0.0.1:5000/register(在联网未开proxy状态下)进行注册，注册成功后会自动跳转到登陆界面。
   如已注册，浏览器打开127.0.0.1:5000/login进行登录。
 3.python proxy_tian_v1.0.py，即可使用proxy。
+
+
+v1.1增加了离线读取缓存
+首先注释掉了403行，这样server无法连接时不会抛出错误
+process_rlist里，将整个判断是否读取buffer的部分放到了if self.server and not self.server.closed and self.server.conn in r:这个判断的外面，也就是说不管怎样都会先找buffer，如果找到了buffer，就使用buffer获取data，之后处理，直接return False（503~527行）。这样就完全忽略了与服务器相关的所有操作，离线读取了buffer。
