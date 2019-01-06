@@ -1,14 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-    proxy.py
-    ~~~~~~~~
-
-    HTTP Proxy Server in Python.
-
-    :copyright: (c) 2013 by Abhinav Singh.
-    :license: BSD, see LICENSE for more details.
-"""
 import sys
 import datetime
 import argparse
@@ -20,7 +11,6 @@ import errno
 import urlparse
 logger = logging.getLogger(__name__)
 buffer = dict()
-f = open("cache.txt",'w')
 
 CRLF, COLON, SPACE = b'\r\n', b':', b' '
 
@@ -37,8 +27,6 @@ CHUNK_PARSER_STATE_WAITING_FOR_DATA = 2
 CHUNK_PARSER_STATE_COMPLETE = 3
 
 class HttpParser(object):
-    """HTTP request/response parser."""
-
     def __init__(self, typ=None):
         self.state = HTTP_PARSER_STATE_INITIALIZED
         self.type = typ if typ else HTTP_REQUEST_PARSER
@@ -194,14 +182,12 @@ class HttpParser(object):
 
 
 class Connection(object):
-    """TCP server/client connection abstraction."""
-
     def __init__(self,  host, port, what):
         self.what = what  # server or client
         self.conn = None
         self.buffer = b''
         self.closed = False
-        self.addr=b''
+        self.addr = b''
         if self.what == b'server':
             self.addr = (host, int(port))
         else:
@@ -239,11 +225,9 @@ class Connection(object):
     def connect(self):
         self.conn = socket.create_connection((self.addr[0], self.addr[1]))
 
-class ProxyError(Exception):
-    pass
 
 
-class ProxyConnectionFailed(ProxyError):
+class ProxyConnectionFailed(object):
 
     def __init__(self, host, port, reason):
         self.host = host
@@ -255,11 +239,6 @@ class ProxyConnectionFailed(ProxyError):
 
 
 class Proxy(threading.Thread):
-    """HTTP proxy implementation.
-    
-    Accepts connection object and act as a proxy between client and server.
-    """
-
     def __init__(self, client):
         super(Proxy, self).__init__()
         self.first_time=True
@@ -284,22 +263,13 @@ class Proxy(threading.Thread):
         return datetime.datetime.utcnow()
 
     def _process_request(self, data):
-        # once we have connection to the server
-        # we don't parse the http request packets
-        # any further, instead just pipe incoming
-        # data from client to server
-
         if self.server and not self.server.closed:
             self.server.queue(data)
             return
-        # parse http request
         self.request.parse(data)
-        # once http request parser has reached the state complete
-        # we attempt to establish connection to destination server
         if self.request.state == HTTP_PARSER_STATE_COMPLETE:
             if self.request.method == b'CONNECT':
                 host, port = self.request.url.path.split(COLON)
-                #self.server = Server(host, port)
                 self.server = Connection(host,port,b'server')
                 try:
                     self.server.connect()
@@ -308,7 +278,6 @@ class Proxy(threading.Thread):
                 self.client.queue(self.connection_established_pkt)
             else:
                 host, port = self.request.url.hostname, self.request.url.port if self.request.url.port else 80
-                #self.server = Server(host, port)
                 self.server = Connection(host,port,b'server')
                 try:
                     self.server.connect()
@@ -320,13 +289,9 @@ class Proxy(threading.Thread):
                 ))
         return
 
-
     def _process_response(self, data,flag):
-        # parse incoming response packet
-        # only for non-https requests
         if not self.request.method == b'CONNECT':
             self.response.parse(data)
-        # queue data for client
         self.client.queue(data)
 
         if not flag:
@@ -364,10 +329,8 @@ class Proxy(threading.Thread):
         if self.client.conn in r:
             data = self.client.recv()
             self.last_activity = self._now()
-
             if not data:
                 return True
-
             try:
                 self._process_request(data)
             except ProxyConnectionFailed as e:
@@ -421,16 +384,12 @@ class Proxy(threading.Thread):
         while True:
             rlist, wlist, xlist = self._get_waitable_lists()
             r, w, x = select.select(rlist, wlist, xlist, 1)
-
             self._process_wlist(w)
             if self._process_rlist(r):
                 break
 
             if self.client.buffer_size() == 0:
-                if self.response.state == HTTP_PARSER_STATE_COMPLETE:
-                    break
-
-                if (self._now() - self.last_activity).seconds > 35:
+                if self.response.state == HTTP_PARSER_STATE_COMPLETE or (self._now() - self.last_activity).seconds > 35:
                     break
 
     def run(self):
@@ -439,9 +398,7 @@ class Proxy(threading.Thread):
 
 
 class Handshake(object):
-    """TCP server implementation."""
-
-    def __init__(self, hostname='127.0.0.1', port=8899, backlog=100):
+    def __init__(self, hostname='127.0.0.1', port=6324, backlog=100):
         self.hostname = hostname
         self.port = port
         self.backlog = backlog
@@ -473,7 +430,7 @@ def main():
     )
 
     parser.add_argument('--hostname', default='127.0.0.1', help='Default: 127.0.0.1')
-    parser.add_argument('--port', default='8899', help='Default: 8899')
+    parser.add_argument('--port', default='6324', help='Default: 6324')
     parser.add_argument('--log-level', default='INFO', help='DEBUG, INFO, WARNING, ERROR, CRITICAL')
     args = parser.parse_args()
 
