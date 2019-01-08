@@ -48,7 +48,8 @@ class HttpParser(object):
 
     def chunk_parse(self, data):
         more = True if len(data) > 0 else False
-        while more: more, data = self.chunk_process(data)
+        while more: 
+            more, data = self.chunk_process(data)
 
     def chunk_process(self, data):
         if self.chunk_state == CHUNK_PARSER_STATE_WAITING_FOR_SIZE:
@@ -113,8 +114,10 @@ class HttpParser(object):
             self.state = HTTP_PARSER_STATE_COMPLETE
 
         return len(data) > 0, data
+
     def process_line_and_header(self,data):
         if self.flag == False:
+            # first line of head
             line = data.split(SPACE)
             if self.type == HTTP_REQUEST_PARSER:
                 self.method = line[0].upper()
@@ -133,6 +136,7 @@ class HttpParser(object):
                 key = parts[0].strip()
                 value = COLON.join(parts[1:]).strip()
                 self.headers[key.lower()] = (key, value)
+                # add into headers
     def build_url(self):
         if not self.url:
             return b'/None'
@@ -262,7 +266,7 @@ class Proxy(threading.Thread):
     def _now():
         return datetime.datetime.utcnow()
 
-    def _process_request(self, data):
+    def _process_request(self, data):#client request
         if self.server and not self.server.closed:
             self.server.queue(data)
             return
@@ -270,12 +274,12 @@ class Proxy(threading.Thread):
         if self.request.state == HTTP_PARSER_STATE_COMPLETE:
             if self.request.method == b'CONNECT':
                 host, port = self.request.url.path.split(COLON)
-                self.server = Connection(host,port,b'server')
+                self.server = Connection(host,port,b'server')#try to connect to server
                 try:
                     self.server.connect()
                 except Exception as e:
                     self.server.closed = True
-                self.client.queue(self.connection_established_pkt)
+                self.client.queue(self.connection_established_pkt)#prepare to send to client
             else:
                 host, port = self.request.url.hostname, self.request.url.port if self.request.url.port else 80
                 self.server = Connection(host,port,b'server')
@@ -294,7 +298,7 @@ class Proxy(threading.Thread):
             self.response.parse(data)
         self.client.queue(data)
 
-        if not flag:
+        if not flag:#not complete in buffer
             if self.request.build_url()+str(self.server.addr) not in buffer and self.request.method != b'CONNECT':
                 print("creating buffer")
                 print("a:", self.request.build_url()+str(self.server.addr))
@@ -347,11 +351,12 @@ class Proxy(threading.Thread):
         if self.first_time:
             self.first_time = False
             if self.request.build_url() + str(self.server.addr) in buffer and self.request.method != b'CONNECT':
+                #first time + exsiting --> must be complete buffer
                 print("using buffer:", self.request.build_url() + str(self.server.addr))
-                self.Read = True
+                self.Read = True #can read
                 data = buffer[self.request.build_url() + str(self.server.addr)]
                 flag = True
-                self._process_response(data, flag)
+                self._process_response(data, flag)#use data in buffer as response of server
                 self.server.close()
                 return False
         else:
@@ -369,10 +374,11 @@ class Proxy(threading.Thread):
                     print('but ', self.request.build_url() + str(self.server.addr), ' in buffer')
                 else:
                     print('and ', self.request.build_url() + str(self.server.addr), ' not in buffer')'''
+        #directly receive from server
         if self.server and not self.server.closed and self.server.conn in r:
             data = self.server.recv()
             self.last_activity = self._now()
-            flag = False
+            flag = False #need to update buffer
             if not data:
                 self.server.close()
             else:
@@ -398,7 +404,7 @@ class Proxy(threading.Thread):
 
 
 class Handshake(object):
-    def __init__(self, hostname='127.0.0.1', port=6324, backlog=100):
+    def __init__(self, hostname='10.2.148.157', port=6324, backlog=100):
         self.hostname = hostname
         self.port = port
         self.backlog = backlog
@@ -417,9 +423,13 @@ class Handshake(object):
         self.socket.listen(self.backlog)
         while True:
             conn, addr = self.socket.accept()
-            # client = Client(conn, addr)
             client = Connection(conn, addr, b'client')
-            self.handle(client)
+            f = open("user.txt", 'r')
+            lines = f.readlines()
+            if client.addr[0] not in lines:
+                client.close()
+            else:
+                self.handle(client)
         logger.info('Closing server socket')
         self.socket.close()
 
@@ -429,7 +439,7 @@ def main():
         description='proxy.py'
     )
 
-    parser.add_argument('--hostname', default='127.0.0.1', help='Default: 127.0.0.1')
+    parser.add_argument('--hostname', default='10.2.148.157', help='Default: 127.0.0.1')
     parser.add_argument('--port', default='6324', help='Default: 6324')
     parser.add_argument('--log-level', default='INFO', help='DEBUG, INFO, WARNING, ERROR, CRITICAL')
     args = parser.parse_args()

@@ -13,9 +13,9 @@ def register():
     else:
         userno = request.form.get('userno')
         password = request.form.get('password')
-        db = pymysql.connect("localhost", "root", "Tzy794920512", "proxyinfomation")
+        db = pymysql.connect("localhost", "root", "123456", "proxyinfomation")
         cursor = db.cursor()
-        sql = "insert into users(UserNo, Password) values (" + userno + ", '" + password + "')"
+        sql = "insert into proxyinfomation(UserNo, Password) values (" + userno + ", '" + password + "')"
         cursor.execute(sql)
         db.commit()
         db.close()
@@ -31,9 +31,9 @@ def login():
     else:
         userno = request.form.get('userno')
         password = request.form.get('password')
-        db = pymysql.connect("localhost", "root", "Tzy794920512", "proxyinfomation")
+        db = pymysql.connect("localhost", "root", "123456", "proxyinfomation")
         cursor = db.cursor()
-        sql = "select * from users where (UserNo = " + userno + ")and (Password = '" + password + "')"
+        sql = "select * from proxyinfomation where (UserNo = " + userno + ")and (Password = '" + password + "')"
         cursor.execute(sql)
         results = cursor.fetchall()
         db.close()
@@ -53,4 +53,4 @@ if __name__ == '__main__':
     f.seek(0)
     f.truncate()
     f.close()
-    app.run()
+    app.run(host='10.2.148.157', port=6666)

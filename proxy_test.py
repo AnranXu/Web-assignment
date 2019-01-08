@@ -1,9 +1,11 @@
-# !/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
     proxy.py
     ~~~~~~~~
+
     HTTP Proxy Server in Python.
+
     :copyright: (c) 2013 by Abhinav Singh.
     :license: BSD, see LICENSE for more details.
 """
@@ -15,7 +17,7 @@ import socket
 import select
 import threading
 import errno
-import multiprocessing
+
 VERSION = (0, 3)
 __version__ = '.'.join(map(str, VERSION[0:2]))
 __description__ = 'HTTP Proxy Server in Python'
@@ -26,8 +28,7 @@ __license__ = 'BSD'
 
 logger = logging.getLogger(__name__)
 buffer = dict()
-user_buffer = dict()
-f = open("cache.txt", 'w')
+f = open("cache.txt",'w')
 # True if we are running on Python 3.
 if sys.version_info[0] == 3:
     text_type = str
@@ -85,7 +86,8 @@ class ChunkParser(object):
 
     def parse(self, data):
         more = True if len(data) > 0 else False
-        while more: more, data = self.process(data)
+        while more: 
+            more, data = self.process(data)
 
     def process(self, data):
         if self.state == CHUNK_PARSER_STATE_WAITING_FOR_SIZE:
@@ -294,7 +296,7 @@ class Connection(object):
     def flush(self):
         sent = self.send(self.buffer)
         self.buffer = self.buffer[sent:]
-        print('flushed %d bytes to %s' % (sent, self.what))
+        logger.debug('flushed %d bytes to %s' % (sent, self.what))
 
 
 class Server(Connection):
@@ -334,14 +336,14 @@ class ProxyConnectionFailed(ProxyError):
 
 class Proxy(threading.Thread):
     """HTTP proxy implementation.
-
+    
     Accepts connection object and act as a proxy between client and server.
     """
 
     def __init__(self, client):
         super(Proxy, self).__init__()
-        self.first_time = True
-        self.Read = False
+        self.first_time=True
+        self.Read=False
         self.start_time = self._now()
         self.last_activity = self.start_time
 
@@ -414,7 +416,7 @@ class Proxy(threading.Thread):
                 ))
             return
 
-    def _process_response(self, data, flag):
+    def _process_response(self, data,flag):
         # parse incoming response packet
         # only for non-https requests
         if not self.request.method == b'CONNECT':
@@ -422,15 +424,21 @@ class Proxy(threading.Thread):
         # queue data for client
         self.client.queue(data)
 
+
+       # print("re_url:",self.request.build_url())
+        #print("rq_url:",self.response.build_url())
+        #print()
+        #print("ca:", self.client.addr)
+       # print("sa:", self.server.addr)
         if not flag:
-            if self.request.build_url().decode() + str(self.server.addr) not in buffer and self.request.method != b'CONNECT':
+            if self.request.build_url()+str(self.server.addr) not in buffer and self.request.method != b'CONNECT':
                 print("creating buffer")
-                print("a:", self.request.build_url().decode() + str(self.server.addr))
-                buffer[self.request.build_url().decode() + str(self.server.addr)] = data
-            elif self.request.build_url().decode() + str(self.server.addr) in buffer and self.request.method != b'CONNECT':
+                print("a:", self.request.build_url()+str(self.server.addr))
+                buffer[self.request.build_url()+str(self.server.addr)] = data
+            elif self.request.build_url()+str(self.server.addr) in buffer and self.request.method != b'CONNECT':
                 print("adding buffer")
-                print("a:", self.request.build_url().decode() + str(self.server.addr))
-                buffer[self.request.build_url().decode() + str(self.server.addr)] += data
+                print("a:", self.request.build_url()+str(self.server.addr))
+                buffer[self.request.build_url()+str(self.server.addr)] += data
 
     def _access_log(self):
         host, port = self.server.addr if self.server else (None, None)
@@ -493,31 +501,38 @@ class Proxy(threading.Thread):
                 self.client.flush()
                 return True
 
-        if self.server and not self.server.closed and self.server.conn in r:
+        if self.server and not self.server.closed:
             logger.debug('server is ready for reads, reading')
-            # read buffer
+            #read buffer
             if self.first_time:
-                self.first_time = False
-                if self.request.build_url().decode() + str(self.server.addr) in buffer and self.request.method != b'CONNECT':
-                    print("using buffer:", self.request.build_url().decode() + str(self.server.addr))
-                    self.Read = True
-                    data = buffer[self.request.build_url().decode() + str(self.server.addr)]
-                    flag = True
+                self.first_time=False
+                if self.request.build_url()+str(self.server.addr) in buffer and self.request.method != b'CONNECT':
+                    print("using buffer:", self.request.build_url()+str(self.server.addr))
+                    print('first time + already in')
+                    self.Read=True
+                    data=buffer[self.request.build_url()+str(self.server.addr)]
+                    flag=True
                 else:
-                    self.Read = False
-                    data = self.server.recv()
-                    flag = False
+                    print('first timme + not in')
+                    self.Read=False
+                    data=self.server.recv()
+                    flag=False
             else:
                 if self.Read:
-                    if self.request.build_url().decode() + str(self.server.addr) in buffer and self.request.method != b'CONNECT':
-                        print("using buffer:", self.request.build_url().decode() + str(self.server.addr))
+                    if self.request.build_url()+str(self.server.addr) in buffer and self.request.method != b'CONNECT':
+                        print("using buffer:", self.request.build_url()+str(self.server.addr))
                         print('read buffer at first time so use buffer')
-                        data = buffer[self.request.build_url().decode() + str(self.server.addr)]
+                        data = buffer[self.request.build_url()+str(self.server.addr)]
                         flag = True
                     else:
                         data = self.server.recv()
                         flag = False
                 else:
+                    print('not read at first time so don''t use buffer')
+                    if self.request.build_url()+str(self.server.addr) in buffer:
+                        print('but ',self.request.build_url()+str(self.server.addr),' in buffer')
+                    else:
+                        print('and ',self.request.build_url()+str(self.server.addr),' not in buffer')
                     data = self.server.recv()
                     flag = False
             self.last_activity = self._now()
@@ -525,7 +540,7 @@ class Proxy(threading.Thread):
                 logger.debug('server closed connection')
                 self.server.close()
             else:
-                self._process_response(data, flag)
+                self._process_response(data,flag)
 
         return False
 
@@ -540,7 +555,7 @@ class Proxy(threading.Thread):
 
             if self.client.buffer_size() == 0:
                 if self.response.state == HTTP_PARSER_STATE_COMPLETE:
-                    logger.debug('client buffer is empty and response state is complete, breaking')
+                    print('client buffer is empty and response state is complete, breaking')
                     break
 
                 if self._is_inactive():
@@ -590,11 +605,6 @@ class TCP(object):
                 conn, addr = self.socket.accept()
                 logger.debug('Accepted connection %r at address %r' % (conn, addr))
                 client = Client(conn, addr)
-                #f = open("user.txt", 'r')
-                #lines = f.readlines()
-                #if client.addr[0] not in lines:
-                #    client.close()
-                #else:
                 self.handle(client)
         except Exception as e:
             logger.exception('Exception while running the server %r' % e)
@@ -605,7 +615,7 @@ class TCP(object):
 
 class HTTP(TCP):
     """HTTP proxy server implementation.
-
+    
     Spawns new process to proxy accepted client connection.
     """
 
