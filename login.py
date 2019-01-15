@@ -3,7 +3,8 @@ from flask import Flask
 from flask import render_template
 from flask import request
 
-
+host = '127.0.0.1'
+port = 5000
 app = Flask(__name__)
 
 @app.route('/register', methods=['GET','POST'])
@@ -53,4 +54,4 @@ if __name__ == '__main__':
     f.seek(0)
     f.truncate()
     f.close()
-    app.run(host='10.2.148.157', port=6666)
+    app.run(host=host, port=port)
